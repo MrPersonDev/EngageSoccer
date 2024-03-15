@@ -6,11 +6,11 @@
 #include "odometry.h"
 #include "path.h"
 
-const double DRIVE_WHEEL_BASE = 17.0;
-const double PATH_P = 1.0;
-const double PATH_RATE = 0.5;
+const double PATH_LINEAR_P = 10.0;
+const double PATH_ANGULAR_P = 60.0;
+const double LOOK_AHEAD_DIST = 12.0;
 
 void follow_path();
-void control_motors_path(double time_s);
+void control_motors_path();
 
 #endif // PLAYER_H_

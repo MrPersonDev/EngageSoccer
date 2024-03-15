@@ -1,54 +1,49 @@
 #include "player.h"
 
 void follow_path() {
-	double total_time = 1000.0;
-	double cur_time = 0.0;
- 	double update_ms = 10.0;
-
-	while (cur_time <= total_time) { 
-		double prev_time = cur_time;
-		control_motors_path(cur_time);
-
-		while (cur_time < prev_time + PATH_RATE) {
-			cur_time += update_ms / 1000.0;
-			update_position();
-			pros::delay(update_ms);
-		}
-	}
-	
-	stop_drive();
+    set_points_curvature();
+    const double update_ms = 10.0;
+    while (true) {
+        control_motors_path();
+        update_position();
+        pros::delay(update_ms);
+    }
 }
 
-void control_motors_path(double time_s) {
-	Point pose_point = get_point(time_s + PATH_RATE);
-	double pose_heading = get_heading(time_s + PATH_RATE);
-	
-	double dx = get_robot_x() - pose_point.x;
-	double dy = pose_point.y - get_robot_y();
-	double h = sqrt(dx*dx + dy*dy);
-	
-	double theta_i = -inertial_radians() + OFFSET;
-	double d_theta = pose_heading - M_PI_2 + OFFSET - theta_i; 
-	
-	d_theta = -mod_angle(-d_theta);
-	
-	double thetaPath = atan2(dx, dy); 
-    double redChord = -h*sin(thetaPath - (theta_i + d_theta/2)); 
-    double greenChord = h*cos(thetaPath - (theta_i + d_theta/2)); 
-    double leftArc = greenChord; 
-    double rightArc = greenChord; 
-    double topArc = redChord; 
-    double bottomArc = redChord; 
+void control_motors_path() {
+    double cur_x = get_robot_x();
+    double cur_y = get_robot_y();
+    double heading = get_robot_heading();
 
-    if (fabs(d_theta) > 0.002) {  // some funky magic number (straight line threshold)
-        leftArc = (greenChord/(2*sin(d_theta/2)) - DRIVE_WHEEL_BASE/2)*d_theta; 
-        rightArc = (greenChord/(2*sin(d_theta/2)) + DRIVE_WHEEL_BASE/2)*d_theta; 
-        topArc = (redChord/(2*sin(d_theta/2)) - DRIVE_WHEEL_BASE/2)*d_theta; 
-        bottomArc = (redChord/(2*sin(d_theta/2)) + DRIVE_WHEEL_BASE/2)*d_theta; 
-    } 
+    Point target_point = get_point(cur_x, cur_y, LOOK_AHEAD_DIST);
+    double linear_response = (1.0 - target_point.curvature) * PATH_LINEAR_P;
 
-	front_left_motor.move(-leftArc/PATH_RATE*PATH_P);
-	back_right_motor.move(rightArc/PATH_RATE*PATH_P);
-	front_right_motor.move(-topArc/PATH_RATE*PATH_P);
-	back_left_motor.move(bottomArc/PATH_RATE*PATH_P);
+    double target_heading = 0;
+
+    double d_x = target_point.x - cur_x;
+    double d_y = target_point.y - cur_y;
+    double d_heading = mod_angle(target_heading - heading);
+
+    double rot_response = d_heading * PATH_ANGULAR_P;
+
+	double magnitude = sqrt(d_x*d_x + d_y*d_y) * linear_response;
+	double angle = atan2(d_x, d_y);
+	double new_x = magnitude * sin(angle + heading);
+	double new_y = magnitude * cos(angle + heading);
+
+	double fr_power = new_x * cos(A1) + new_y * sin(A1) + rot_response; 
+	double fl_power = new_x * cos(A2) + new_y * sin(A2) + rot_response; 
+	double bl_power = new_x * cos(A3) + new_y * sin(A3) + rot_response; 
+	double br_power = new_x * cos(A4) + new_y * sin(A4) + rot_response; 
+
+	double power_scale = get_power_scale(4, fr_power, fl_power, bl_power, br_power);
+	fr_power *= power_scale;
+	fl_power *= power_scale;
+	bl_power *= power_scale;
+	br_power *= power_scale;
+
+	front_left_motor.move(fl_power);
+	front_right_motor.move(fr_power);
+	back_left_motor.move(bl_power);
+	back_right_motor.move(br_power);
 }

@@ -11,6 +11,7 @@
 void opcontrol() {
 	initialize_robot();
 
+	// generate_path();
 	// driver();
 	// shootout_goalie();
 	shootout_player();
