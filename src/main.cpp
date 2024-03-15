@@ -11,9 +11,9 @@
 void opcontrol() {
 	initialize_robot();
 
-	driver();
+	// driver();
 	// shootout_goalie();
-	// shootout_player();
+	shootout_player();
 }
 
 void driver() {
@@ -22,7 +22,10 @@ void driver() {
 }
 
 void shootout_goalie() {
-	track_ball();
+	while (true) {
+		track_ball();
+		pros::delay(10.0);
+	}
 }
 
 void shootout_player() {

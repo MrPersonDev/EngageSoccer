@@ -7,16 +7,18 @@ void track_ball() {
 	const double forward_pw = 50.0;
 	const double forward_lb = 0.005;
 	const double forward_ms = 500.0;
-	if (forward_rand <= forward_lb) {
+	if (forward_rand <= forward_lb && ball_side == 0) {
 		front_left_motor.move(-forward_pw);
 		front_right_motor.move(forward_pw);
 		back_left_motor.move(-forward_pw);
 		back_right_motor.move(forward_pw);
+		intake();
 		pros::delay(forward_ms);
 		front_left_motor.move(stop);
 		front_right_motor.move(stop);
 		back_left_motor.move(stop);
 		back_right_motor.move(stop);
+		stop_intake();
 	}
 
 	pros::vision_object_s_t rtn = vision_sensor.get_by_size(0);
